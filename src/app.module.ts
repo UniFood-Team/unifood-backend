@@ -7,6 +7,8 @@ import { UsersModule } from './users/users.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthGuard } from './auth/guards/auth.guard';
 import { APP_GUARD } from '@nestjs/core';
+import { ProductModule } from './product/product.module';
+import { OrderModule } from './order/order.module';
 
 @Module({
   imports: [
@@ -14,14 +16,16 @@ import { APP_GUARD } from '@nestjs/core';
     FirebaseModule.forRoot(),
     AuthModule,
     UsersModule,
+    ProductModule,
+    OrderModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    {
-      provide: APP_GUARD,
-      useClass: AuthGuard,
-    },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: AuthGuard,
+    // },
   ],
 })
 export class AppModule {}
