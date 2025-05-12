@@ -6,10 +6,12 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { ListProductDto } from './dto/list-product.dto';
 
 @Controller('product')
 export class ProductController {
@@ -21,8 +23,18 @@ export class ProductController {
   }
 
   @Get()
-  findAll() {
-    return this.productService.findAll();
+  async findAll(@Query() query: ListProductDto) {
+    const queryObj = {
+      categorias: query.categorias?.split(',').map((c) => c.trim()) || [],
+      minPrice: query.minPrice ? parseFloat(query.minPrice) : undefined,
+      maxPrice: query.maxPrice ? parseFloat(query.maxPrice) : undefined,
+      disponibilidade: query.disponibilidade === 'true',
+      avaliacaoMinima: query.avaliacaoMinima
+        ? parseFloat(query.avaliacaoMinima)
+        : undefined,
+    };
+
+    return this.productService.findAll(queryObj);
   }
 
   @Get(':id')

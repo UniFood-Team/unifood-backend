@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsString } from 'class-validator';
+import { IsArray, IsNumber, IsString } from 'class-validator';
 
 export class CreateProductDto {
   @ApiProperty({ example: 'Brigadeiro' })
@@ -23,4 +23,8 @@ export class CreateProductDto {
   })
   @IsString()
   imagemUrl: string;
+
+  @ApiProperty()
+  @IsArray()
+  categorias: string[];
 }
