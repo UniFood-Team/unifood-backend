@@ -15,7 +15,7 @@ export class FirebaseService {
   }
   
   async getUserByEmail(email: string) {
-    return await admin.auth().getUserByEmail(email);
+    return await firebaseAdmin.auth().getUserByEmail(email);
   }
   
   async createUser(props: CreateRequest): Promise<UserRecord> {
