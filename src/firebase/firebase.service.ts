@@ -13,7 +13,11 @@ export class FirebaseService {
   constructor(firebaseConfig: FirebaseConfigService) {
     this.apiKey = firebaseConfig.apiKey;
   }
-
+  
+  async getUserByEmail(email: string) {
+    return await admin.auth().getUserByEmail(email);
+  }
+  
   async createUser(props: CreateRequest): Promise<UserRecord> {
     return (await firebaseAdmin
       .auth()
