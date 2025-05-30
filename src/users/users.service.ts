@@ -10,7 +10,7 @@ async registerUser(dto: RegisterUserDto) {
   try {
     const existingUser = await this.firebaseService.getUserByEmail(dto.email);
     
-    // Se o usuário já existe, retornar ou lançar exceção conforme lógica do seu app
+    // Se o usuário já existe, retornar ou lançar exceção
     if (existingUser) {
       return { message: 'Usuário já existe com esse e-mail.', uid: existingUser.uid };
     }
