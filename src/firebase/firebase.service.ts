@@ -107,4 +107,10 @@ export class FirebaseService {
     }
     throw new Error(error.message);
   }
+
+    async saveUserToFirestore(userData: Record<string, any>) {
+    const plainData = JSON.parse(JSON.stringify(userData)); // Remove métodos e protótipos
+    return await firebaseAdmin.firestore().collection('users').add(plainData);
+  }
+
 }

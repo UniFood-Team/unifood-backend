@@ -26,11 +26,18 @@ async registerUser(dto: RegisterUserDto) {
     email: dto.email,
     password: dto.password,
   });
-    // if (dto.roles?.length) {
-    //   await this.firebaseService.setCustomUserClaims(user.uid, {
-    //     roles: dto.roles,
-    //   });
-    // }
+      await this.firebaseService.setCustomUserClaims(user.uid, {
+        role: dto.role,
+      });
+
+      await this.firebaseService.saveUserToFirestore({
+      uid: user.uid,
+      firstName: dto.firstName,
+      email: dto.email,
+      role: dto.role,
+      createdAt: new Date().toISOString(),
+    });
+    
     return user;
   }
 }
