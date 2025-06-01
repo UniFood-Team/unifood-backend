@@ -13,6 +13,12 @@ import { instanceToPlain } from 'class-transformer';
 export class ProductService {
   constructor(private readonly firebaseService: FirebaseService) {}
 
+  async findById(productId: string) {
+    const product = await this.firebaseService.getProductById(productId);
+    if (!product) throw new NotFoundException('Produto não encontrado');
+    return product;
+  }
+
   async validateCategorias(categorias: string[]) {
     if (!categorias || categorias.length === 0) return;
 
