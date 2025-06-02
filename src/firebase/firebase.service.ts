@@ -25,6 +25,7 @@ export class FirebaseService {
   getFirestore() {
     return this.firestore;
   }
+
   
   async getUserByEmail(email: string) {
     return await firebaseAdmin.auth().getUserByEmail(email);
