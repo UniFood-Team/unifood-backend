@@ -1,11 +1,21 @@
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { Injectable } from '@nestjs/common';
 import { RegisterUserDto } from './dtos/register-user.dto';
+import { CartService } from '../cart/cart.service';
+
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly firebaseService: FirebaseService) {}
+  constructor(
+    private readonly firebaseService: FirebaseService,
+    private readonly cartService: CartService,
+  ) {}
 
+async getUserCart(userId: string) {
+   
+    return this.cartService.getCart(userId);
+  }
+  
 async registerUser(dto: RegisterUserDto) {
   try {
     const existingUser = await this.firebaseService.getUserByEmail(dto.email);
@@ -26,11 +36,18 @@ async registerUser(dto: RegisterUserDto) {
     email: dto.email,
     password: dto.password,
   });
-    // if (dto.roles?.length) {
-    //   await this.firebaseService.setCustomUserClaims(user.uid, {
-    //     roles: dto.roles,
-    //   });
-    // }
+      await this.firebaseService.setCustomUserClaims(user.uid, {
+        role: dto.role,
+      });
+
+      await this.firebaseService.saveUserToFirestore({
+      uid: user.uid,
+      firstName: dto.firstName,
+      email: dto.email,
+      role: dto.role,
+      createdAt: new Date().toISOString(),
+    });
+
     return user;
   }
 }

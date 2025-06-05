@@ -13,6 +13,12 @@ import { instanceToPlain } from 'class-transformer';
 export class ProductService {
   constructor(private readonly firebaseService: FirebaseService) {}
 
+  async findById(productId: string) {
+    const product = await this.firebaseService.getProductById(productId);
+    if (!product) throw new NotFoundException('Produto não encontrado');
+    return product;
+  }
+
   async validateCategorias(categorias: string[]) {
     if (!categorias || categorias.length === 0) return;
 
@@ -155,10 +161,28 @@ export class ProductService {
     };
   }
 
-  async remove(id: string) {
-    await firebaseAdmin.firestore().collection('products').doc(id).delete();
-    return {
-      message: 'Produto removido com sucesso!',
-    };
+async remove(id: string, deletadoPor: string) {
+  const docRef = firebaseAdmin.firestore().collection('products').doc(id);
+  const docSnapshot = await docRef.get();
+
+  if (!docSnapshot.exists) {
+    throw new NotFoundException('Produto não encontrado');
   }
+
+  const dadosDoProduto = docSnapshot.data();
+
+  // Registra os dados excluídos com quem deletou
+  await firebaseAdmin.firestore().collection('produtos_deletados').add({
+    itemId: id,
+    dados: dadosDoProduto,
+    deletadoPor: deletadoPor,
+    deletadoEm: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  await docRef.delete();
+
+  return {
+    message: 'Produto removido com sucesso.',
+  };
+}
 }

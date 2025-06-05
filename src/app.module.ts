@@ -9,7 +9,7 @@ import { AuthGuard } from './auth/guards/auth.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { ProductModule } from './product/product.module';
 import { OrderModule } from './order/order.module';
-
+import { CartModule } from './cart/cart.module'
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -18,6 +18,7 @@ import { OrderModule } from './order/order.module';
     UsersModule,
     ProductModule,
     OrderModule,
+    CartModule,
   ],
   controllers: [AppController],
   providers: [

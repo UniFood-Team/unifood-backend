@@ -9,10 +9,23 @@ import { FirebaseConfigService } from './firebase-config.service';
 @Injectable()
 export class FirebaseService {
   private readonly apiKey: string;
+  private readonly firestore: FirebaseFirestore.Firestore;
 
   constructor(firebaseConfig: FirebaseConfigService) {
     this.apiKey = firebaseConfig.apiKey;
+   if (!firebaseAdmin.apps.length) {
+    firebaseAdmin.initializeApp({
+      credential: firebaseAdmin.credential.applicationDefault(),
+    });
   }
+
+  this.firestore = firebaseAdmin.firestore();
+  }
+
+  getFirestore() {
+    return this.firestore;
+  }
+
   
   async getUserByEmail(email: string) {
     return await firebaseAdmin.auth().getUserByEmail(email);
@@ -24,6 +37,7 @@ export class FirebaseService {
       .createUser(props)
       .catch(this.handleFirebaseAuthError)) as UserRecord;
   }
+  
 
   async setCustomUserClaims(uid: string, claims: Record<string, any>) {
     return await firebaseAdmin.auth().setCustomUserClaims(uid, claims);
@@ -106,5 +120,15 @@ export class FirebaseService {
       throw new BadRequestException(message);
     }
     throw new Error(error.message);
+  }
+
+    async saveUserToFirestore(userData: Record<string, any>) {
+    const plainData = JSON.parse(JSON.stringify(userData)); // Remove métodos e protótipos
+    return await firebaseAdmin.firestore().collection('users').add(plainData);
+  }
+  async getProductById(productId: string) {
+    const doc = await this.firestore.collection('products').doc(productId).get();
+    if (!doc.exists) return null;
+    return doc.data();
   }
 }
