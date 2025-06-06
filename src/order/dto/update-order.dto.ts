@@ -1,4 +1,8 @@
-import { PartialType } from '@nestjs/swagger';
-import { CreateOrderDto } from './create-order.dto';
+import { IsOptional, IsString, IsIn } from 'class-validator';
 
-export class UpdateOrderDto extends PartialType(CreateOrderDto) {}
+export class UpdateOrderDto {
+  @IsOptional()
+  @IsString()
+  @IsIn(['pendente', 'pago', 'cancelado', 'entregue'])
+  status?: string;
+}

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsNumber, IsString } from 'class-validator';
+import { IsArray, IsNumber, IsString, IsInt, Min } from 'class-validator';
 
 export class CreateProductDto {
   @ApiProperty({ example: 'Brigadeiro' })
@@ -27,4 +27,10 @@ export class CreateProductDto {
   @ApiProperty()
   @IsArray()
   categorias: string[];
+
+  @ApiProperty()
+  @IsInt()
+  @Min(0)
+  estoque: number;
+
 }

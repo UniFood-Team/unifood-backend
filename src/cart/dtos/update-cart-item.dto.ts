@@ -15,5 +15,5 @@ export class UpdateCartItemDto {
   @IsNotEmpty()
   @IsNumber()
   @Min(1)
-  quantity: number;
+  quantidade: number;
 }

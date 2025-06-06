@@ -9,10 +9,16 @@ import { AuthGuard } from './auth/guards/auth.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { ProductModule } from './product/product.module';
 import { OrderModule } from './order/order.module';
-import { CartModule } from './cart/cart.module'
+import { OrderService } from './order/order.service';
+import { CartModule } from './cart/cart.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { SchedulerService } from './scheduler/scheduler.service';
+
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     FirebaseModule.forRoot(),
     AuthModule,
     UsersModule,
@@ -23,10 +29,13 @@ import { CartModule } from './cart/cart.module'
   controllers: [AppController],
   providers: [
     AppService,
+    SchedulerService,
+    OrderService,
     // {
     //   provide: APP_GUARD,
     //   useClass: AuthGuard,
     // },
   ],
+  exports: [OrderService],
 })
 export class AppModule {}

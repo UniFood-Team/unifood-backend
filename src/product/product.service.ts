@@ -19,6 +19,39 @@ export class ProductService {
     return product;
   }
 
+async updateQuantity(productId: string, newQuantity: number) {
+  if (!productId || productId.trim() === '') {
+    throw new BadRequestException('productId inválido');
+  }
+
+  console.log('Chamando updateQuantity com productId:', productId);
+
+  try {
+    const productRef = firebaseAdmin.firestore().collection('products').doc(productId);
+    const productSnap = await productRef.get();
+
+    if (!productSnap.exists) {
+      throw new NotFoundException(`Produto ${productId} não encontrado.`);
+    }
+
+    const estoqueAtual = productSnap.data()?.estoque;
+    console.log('Estoque atual:', estoqueAtual);
+    console.log('Novo estoque:', newQuantity);
+
+    await productRef.update({ estoque: newQuantity });
+
+    const updatedProductSnap = await productRef.get();
+    const updatedData = updatedProductSnap.data();
+
+    console.log('Estoque atualizado com sucesso:', updatedData?.estoque);
+
+    return { id: updatedProductSnap.id, ...updatedData };
+  } catch (error) {
+    console.error('Erro em updateQuantity:', error);
+    throw new BadRequestException('Erro ao atualizar estoque.');
+  }
+}
+
   async validateCategorias(categorias: string[]) {
     if (!categorias || categorias.length === 0) return;
 
