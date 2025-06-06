@@ -14,7 +14,6 @@ import { CartModule } from './cart/cart.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerService } from './scheduler/scheduler.service';
 
-
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
