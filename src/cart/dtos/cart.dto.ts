@@ -1,7 +1,6 @@
 export interface CartItem {
   productId: string;
-  quantity: number;
-  preco: number;
+  quantidade: number;
 }
 
 export interface CartData {

@@ -5,6 +5,8 @@ import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
 import { UserRecord } from 'firebase-admin/lib/auth/user-record';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { FirebaseConfigService } from './firebase-config.service';
+import { Product } from 'src/product/interface/product.interface';
+
 
 @Injectable()
 export class FirebaseService {
@@ -126,9 +128,10 @@ export class FirebaseService {
     const plainData = JSON.parse(JSON.stringify(userData)); // Remove métodos e protótipos
     return await firebaseAdmin.firestore().collection('users').add(plainData);
   }
-  async getProductById(productId: string) {
-    const doc = await this.firestore.collection('products').doc(productId).get();
-    if (!doc.exists) return null;
-    return doc.data();
-  }
+async getProductById(productId: string): Promise<Product | null> {
+  const doc = await this.getFirestore().collection('products').doc(productId).get();
+  if (!doc.exists) return null;
+  return doc.data() as Product;
+}
+
 }

@@ -4,6 +4,8 @@ import { AddToCartDto } from './dtos/add-to-cart.dto';
 import { UpdateCartItemDto } from './dtos/update-cart-item.dto';
 import { CartItem, CartData } from './dtos/cart.dto';
 import { ProductService } from 'src/product/product.service';
+import { Product } from 'src/product/interface/product.interface';
+
 
 
 @Injectable()
@@ -13,8 +15,14 @@ export class CartService {
     private readonly productService: ProductService,
 ) {}
 
-async addToCart(userId: string, item: { productId: string; quantity: number }) {
-  const { productId, quantity } = item;
+  async clearCart(userId: string): Promise<void> {
+    const cartRef = this.firebaseService.getFirestore().collection('carts').doc(userId);
+    await cartRef.delete();
+  }
+
+async addToCart(userId: string, item: { productId: string; quantidade: number }) {
+  const { productId, quantidade } = item;
+
 
   const product = await this.firebaseService.getProductById(productId);
 
@@ -40,36 +48,39 @@ async addToCart(userId: string, item: { productId: string; quantity: number }) {
     const existingIndex = items.findIndex(item => item.productId === productId);
 
     if (existingIndex > -1) {
-      const newQuantity = items[existingIndex].quantity + quantity;
+      const newQuantity = items[existingIndex].quantidade + quantidade;
+
 
       if (newQuantity > product.estoque) {
         throw new BadRequestException(`Quantidade solicitada ultrapassa o estoque disponível (${product.estoque}).`);
       }
 
-      items[existingIndex].quantity = newQuantity;
+      items[existingIndex].quantidade = newQuantity;
     } else {
-      if (quantity > product.estoque) {
+      if (quantidade > product.estoque) {
+
         throw new BadRequestException(`Quantidade solicitada ultrapassa o estoque disponível (${product.estoque}).`);
       }
       items.push({
         productId,
-        quantity,
+        quantidade,
         preco: product.preco,
       });
     }
   } else {
-    if (quantity > product.estoque) {
+    if (quantidade > product.estoque) {
+
       throw new BadRequestException(`Quantidade solicitada ultrapassa o estoque disponível (${product.estoque}).`);
     }
     items = [{
       productId,
-      quantity,
+      quantidade,
       preco: product.preco,
     }];
   }
 
   const subtotal = items.reduce(
-    (sum, item) => sum + item.quantity * item.preco,
+    (sum, item) => sum + item.quantidade * item.preco,
     0,
   );
 
@@ -110,15 +121,16 @@ async updateCartItem(userId: string, updateCartItemDto: UpdateCartItemDto) {
   const product = await this.productService.findById(updateCartItemDto.productId);
   if (!product) throw new NotFoundException('Produto não encontrado');
 
-  if (product.estoque < updateCartItemDto.quantity)
+  if (product.estoque < updateCartItemDto.quantidade)
     throw new BadRequestException('Quantidade solicitada maior que o estoque disponível');
 
   // Atualiza a quantidade do item no carrinho
-  cartData.items[itemIndex].quantity = updateCartItemDto.quantity;
+  cartData.items[itemIndex].quantidade = updateCartItemDto.quantidade;
 
   // Recalcula subtotal antes de salvar
   const subtotal = cartData.items.reduce(
-    (sum, item) => sum + item.quantity * item.preco,
+    (sum, item) => sum + item.quantidade * item.preco,
+
     0,
   );
 

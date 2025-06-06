@@ -12,6 +12,7 @@ import {
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { UpdateQuantityDto } from './dto/update-stock-product.dto';
 import { ListProductDto } from './dto/list-product.dto';
 
 @Controller('product')
@@ -46,6 +47,15 @@ export class ProductController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
     return this.productService.update(id, updateProductDto);
+  }
+
+  @Patch(':id/quantity')
+  async updateQuantity(
+    @Param('id') id: string,
+    @Body() updateQuantityDto: UpdateQuantityDto,
+  ) {
+    const { quantidade } = updateQuantityDto;
+    return this.productService.updateQuantity(id, quantidade);
   }
 
   @Delete(':id')
