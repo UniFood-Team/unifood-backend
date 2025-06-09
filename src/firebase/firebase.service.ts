@@ -133,4 +133,5 @@ async getProductById(productId: string): Promise<Product | null> {
   if (!doc.exists) return null;
   return doc.data() as Product;
 }
+
 }

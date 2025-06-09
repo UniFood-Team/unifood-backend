@@ -16,4 +16,5 @@ export class UpdateCartItemDto {
   @IsNumber()
   @Min(1)
   quantidade: number;
+
 }

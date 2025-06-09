@@ -7,6 +7,7 @@ import { ProductService } from 'src/product/product.service';
 import { Product } from 'src/product/interface/product.interface';
 
 
+
 @Injectable()
 export class CartService {
   constructor(
@@ -21,6 +22,7 @@ export class CartService {
 
 async addToCart(userId: string, item: { productId: string; quantidade: number }) {
   const { productId, quantidade } = item;
+
 
   const product = await this.firebaseService.getProductById(productId);
 
@@ -48,6 +50,7 @@ async addToCart(userId: string, item: { productId: string; quantidade: number })
     if (existingIndex > -1) {
       const newQuantity = items[existingIndex].quantidade + quantidade;
 
+
       if (newQuantity > product.estoque) {
         throw new BadRequestException(`Quantidade solicitada ultrapassa o estoque disponível (${product.estoque}).`);
       }
@@ -55,6 +58,7 @@ async addToCart(userId: string, item: { productId: string; quantidade: number })
       items[existingIndex].quantidade = newQuantity;
     } else {
       if (quantidade > product.estoque) {
+
         throw new BadRequestException(`Quantidade solicitada ultrapassa o estoque disponível (${product.estoque}).`);
       }
       items.push({
@@ -65,6 +69,7 @@ async addToCart(userId: string, item: { productId: string; quantidade: number })
     }
   } else {
     if (quantidade > product.estoque) {
+
       throw new BadRequestException(`Quantidade solicitada ultrapassa o estoque disponível (${product.estoque}).`);
     }
     items = [{
@@ -125,6 +130,7 @@ async updateCartItem(userId: string, updateCartItemDto: UpdateCartItemDto) {
   // Recalcula subtotal antes de salvar
   const subtotal = cartData.items.reduce(
     (sum, item) => sum + item.quantidade * item.preco,
+
     0,
   );
 
