@@ -4,44 +4,44 @@ import { CartService } from './cart.service';
 import { AddToCartDto } from './dtos/add-to-cart.dto';
 import { UpdateCartItemDto } from './dtos/update-cart-item.dto';
 import { CartData } from './dtos/cart.dto';
-import { AuthGuard } from 'src/auth/guards/auth.guard';
+// import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { ApiTags, ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('Cart')
 @ApiBearerAuth()
 @Controller('cart')
-@UseGuards(AuthGuard)
+// @UseGuards(AuthGuard)
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
-  @Post('add')
-  @ApiOperation({ summary: 'Adiciona um produto ao carrinho' })
-  @ApiBody({ type: AddToCartDto })
-  async addToCart(@Req() req, @Body() addToCartDto: AddToCartDto) {
-    const userId = req.user.uid; 
-    return this.cartService.addToCart(userId, addToCartDto);
+  // @Post('add')
+  // @ApiOperation({ summary: 'Adiciona um produto ao carrinho' })
+  // @ApiBody({ type: AddToCartDto })
+  // async addToCart(@Req() req, @Body() addToCartDto: AddToCartDto) {
+  //   const userId = req.user.uid; 
+  //   return this.cartService.addToCart(userId, addToCartDto);
+  // }
+
+//para testes, descomentar tudo abaixo
+
+@Post('add')
+@ApiOperation({ summary: 'Adiciona um produto ao carrinho' })
+@ApiBody({ type: AddToCartDto })
+async addToCart(
+  @Body() addToCartDto: AddToCartDto & { userId?: string },
+  @Req() req,
+) {
+  // Prioriza userId do corpo (para teste via Swagger), senão pega do token auth
+  const userId = addToCartDto.userId ?? req.user?.uid;
+
+  if (!userId) {
+    throw new BadRequestException('userId é obrigatório');
   }
 
-// //para testes, descomentar tudo abaixo
+  const { productId, quantidade } = addToCartDto;
 
-// @Post('add')
-// @ApiOperation({ summary: 'Adiciona um produto ao carrinho' })
-// @ApiBody({ type: AddToCartDto })
-// async addToCart(
-//   @Body() addToCartDto: AddToCartDto & { userId?: string },
-//   @Req() req,
-// ) {
-//   // Prioriza userId do corpo (para teste via Swagger), senão pega do token auth
-//   const userId = addToCartDto.userId ?? req.user?.uid;
-
-//   if (!userId) {
-//     throw new BadRequestException('userId é obrigatório');
-//   }
-
-//   const { productId, quantidade } = addToCartDto;
-
-//   return this.cartService.addToCart(userId, { productId, quantidade });
-// }
+  return this.cartService.addToCart(userId, { productId, quantidade });
+}
 
 @Get()
 @ApiOperation({ summary: 'Obtém o carrinho do usuário autenticado' })
