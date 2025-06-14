@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, MethodNotAllowedException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Req, Param, Delete, MethodNotAllowedException } from '@nestjs/common';
 import { OrderService } from './order.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { AddOrderToCartDto } from './dto/Add-order-to-cart.dto';
 import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
 
 @ApiTags('orders')
@@ -29,17 +30,48 @@ export class OrderController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Atualiza informações de um pedido' })
+  @ApiParam({ name: 'id', description: 'ID do pedido' })
   update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
     return this.orderService.update(id, updateOrderDto);
   }
 
-    @Patch(':id/cancel')
+  @Get('history')
+  @ApiOperation({ summary: 'Lista o histórico de pedidos do usuário autenticado' })
+  getHistory(@Req() req: Request) {
+    const userId = req['user']?.uid;
+    return this.orderService.getOrderHistory(userId);
+  }
+
+  @Patch(':id/add-to-cart')
+  @ApiOperation({ summary: 'Adiciona um pedido ao carrinho' })
+  @ApiParam({ name: 'id', description: 'ID do pedido' })
+  async addOrderToCart(
+    @Param('id') orderId: string,
+    @Body() body: AddOrderToCartDto,
+  ) {
+    const { userId } = body;
+    return this.orderService.addOrderToCart(orderId, userId);
+  }
+
+  @Get(':id/details')
+  @ApiOperation({ summary: 'Busca detalhes de um pedido específico para o usuário autenticado' })
+  @ApiParam({ name: 'id', description: 'ID do pedido' })
+  getDetails(@Param('id') id: string, @Req() req: Request) {
+    const userId = req['user']?.uid;
+    return this.orderService.getOrderDetails(id, userId);
+  }
+
+  @Patch(':id/cancel')
   @ApiOperation({ summary: 'Cancela um pedido pelo usuário' })
+  @ApiParam({ name: 'id', description: 'ID do pedido' })
   cancel(@Param('id') id: string) {
     return this.orderService.cancel(id);
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Não permite deletar pedidos' })
+  @ApiParam({ name: 'id', description: 'ID do pedido' })
   remove(@Param('id') id: string) {
     throw new MethodNotAllowedException('Pedidos não podem ser deletados');
   }

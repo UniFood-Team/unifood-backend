@@ -6,20 +6,24 @@ import { UserRecord } from 'firebase-admin/lib/auth/user-record';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { FirebaseConfigService } from './firebase-config.service';
 import { Product } from 'src/product/interface/product.interface';
+import * as serviceAccount from '../../serviceAccountKey.json';
 
 
 @Injectable()
 export class FirebaseService {
   private readonly apiKey: string;
-  private readonly firestore: FirebaseFirestore.Firestore;
+  public readonly firestore: FirebaseFirestore.Firestore;
+  public readonly admin: firebaseAdmin.app.App;
 
   constructor(firebaseConfig: FirebaseConfigService) {
     this.apiKey = firebaseConfig.apiKey;
    if (!firebaseAdmin.apps.length) {
     firebaseAdmin.initializeApp({
-      credential: firebaseAdmin.credential.applicationDefault(),
+    credential: firebaseAdmin.credential.cert(serviceAccount as firebaseAdmin.ServiceAccount),
     });
-  }
+  }else {
+      this.admin = firebaseAdmin.app(); // já inicializado
+    }
 
   this.firestore = firebaseAdmin.firestore();
   }
