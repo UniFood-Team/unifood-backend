@@ -54,7 +54,8 @@ pids
 *.pid
 *.seed
 *.pid.lock
-
+#Service Account Key
+serviceAccountKey.json
 #Chave SDK admin
 firebase-admin.json
 
