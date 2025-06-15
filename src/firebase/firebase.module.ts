@@ -3,7 +3,7 @@ import { DynamicModule, Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FirebaseConfigService } from './firebase-config.service';
 import { FirebaseService } from './firebase.service';
-import * as fs from 'fs'
+import * as fs from 'fs';
 
 @Global()
 @Module({})
@@ -14,7 +14,6 @@ export class FirebaseModule {
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         const apiKey = configService.get<string>('FIREBASE_API_KEY');
-        
         if (!apiKey) {
           throw new Error('FIREBASE_API_KEY environment variable is not set');
         }
@@ -22,32 +21,28 @@ export class FirebaseModule {
       },
     };
 
-    const firebaseProvider = {
+    const firebaseAdminProvider = {
       provide: 'FIREBASE_ADMIN',
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
-        const credentials = configService.get<string>(
-          'FIREBASE_ADMIN_CREDENTIALS',
-        );
-        if (!credentials) {
-          throw new Error(
-            'FIREBASE_ADMIN_CREDENTIALS environment variable is not set',
-          );
+        const credentialsPath = configService.get<string>('FIREBASE_ADMIN_CREDENTIALS');
+        if (!credentialsPath) {
+          throw new Error('FIREBASE_ADMIN_CREDENTIALS environment variable is not set');
         }
-
-        const serviceAccount = JSON.parse(fs.readFileSync(credentials, 'utf8'));
-        firebaseAdmin.initializeApp({
-          credential: firebaseAdmin.credential.cert(serviceAccount),
-        });
-
+        const serviceAccount = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
+        if (!firebaseAdmin.apps.length) {
+          firebaseAdmin.initializeApp({
+            credential: firebaseAdmin.credential.cert(serviceAccount),
+          });
+        }
         return firebaseAdmin;
       },
     };
 
     return {
       module: FirebaseModule,
-      providers: [firebaseConfigProvider, firebaseProvider, FirebaseService],
-      exports: [firebaseConfigProvider, firebaseProvider, FirebaseService],
+      providers: [firebaseConfigProvider, firebaseAdminProvider, FirebaseService],
+      exports: [firebaseConfigProvider, firebaseAdminProvider, FirebaseService],
     };
   }
 }

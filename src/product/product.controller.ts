@@ -25,19 +25,23 @@ export class ProductController {
   }
 
   @Get()
-  async findAll(@Query() query: ListProductDto) {
-    const queryObj = {
-      categorias: query.categorias?.split(',').map((c) => c.trim()) || [],
-      minPrice: query.minPrice ? parseFloat(query.minPrice) : undefined,
-      maxPrice: query.maxPrice ? parseFloat(query.maxPrice) : undefined,
-      disponibilidade: query.disponibilidade === 'true',
-      avaliacaoMinima: query.avaliacaoMinima
-        ? parseFloat(query.avaliacaoMinima)
-        : undefined,
-    };
+async findAll(@Query() query: ListProductDto) {
+  // converter strings para tipos corretos
+  const categorias = query.categorias?.split(',').map(c => c.trim()) || [];
+  const minPrice = query.minPrice ? parseFloat(query.minPrice) : undefined;
+  const maxPrice = query.maxPrice ? parseFloat(query.maxPrice) : undefined;
+  const disponibilidade = query.disponibilidade === 'true';
+  const avaliacaoMinima = query.avaliacaoMinima ? parseFloat(query.avaliacaoMinima) : undefined;
 
-    return this.productService.findAll(queryObj);
-  }
+  return this.productService.findAll({
+    categorias,
+    minPrice,
+    maxPrice,
+    disponibilidade,
+    avaliacaoMinima,
+  });
+}
+
 
   @Get(':id')
   findOne(@Param('id') id: string) {

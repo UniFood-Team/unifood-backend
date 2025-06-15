@@ -6,50 +6,52 @@ import { UserRecord } from 'firebase-admin/lib/auth/user-record';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { FirebaseConfigService } from './firebase-config.service';
 import { Product } from 'src/product/interface/product.interface';
+import * as serviceAccount from '../../serviceAccountKey.json';
 
 
 @Injectable()
 export class FirebaseService {
   private readonly apiKey: string;
-  private readonly firestore: FirebaseFirestore.Firestore;
+  public readonly firestore: FirebaseFirestore.Firestore;
+  public readonly admin: firebaseAdmin.app.App;
 
   constructor(firebaseConfig: FirebaseConfigService) {
     this.apiKey = firebaseConfig.apiKey;
-   if (!firebaseAdmin.apps.length) {
-    firebaseAdmin.initializeApp({
-      credential: firebaseAdmin.credential.applicationDefault(),
-    });
-  }
 
-  this.firestore = firebaseAdmin.firestore();
+    if (!firebaseAdmin.apps.length) {
+      firebaseAdmin.initializeApp({
+        credential: firebaseAdmin.credential.cert(serviceAccount as firebaseAdmin.ServiceAccount),
+      });
+    }
+    this.admin = firebaseAdmin.app();
+
+    this.firestore = this.admin.firestore();
   }
 
   getFirestore() {
     return this.firestore;
   }
 
-  
   async getUserByEmail(email: string) {
-    return await firebaseAdmin.auth().getUserByEmail(email);
+    return await this.admin.auth().getUserByEmail(email);
   }
-  
+
   async createUser(props: CreateRequest): Promise<UserRecord> {
-    return (await firebaseAdmin
+    return (await this.admin
       .auth()
       .createUser(props)
       .catch(this.handleFirebaseAuthError)) as UserRecord;
   }
-  
 
   async setCustomUserClaims(uid: string, claims: Record<string, any>) {
-    return await firebaseAdmin.auth().setCustomUserClaims(uid, claims);
+    return await this.admin.auth().setCustomUserClaims(uid, claims);
   }
 
   async verifyIdToken(
     token: string,
     checkRevoked = false,
   ): Promise<DecodedIdToken> {
-    return (await firebaseAdmin
+    return (await this.admin
       .auth()
       .verifyIdToken(token, checkRevoked)
       .catch(this.handleFirebaseAuthError)) as DecodedIdToken;
@@ -65,7 +67,7 @@ export class FirebaseService {
   }
 
   async revokeRefreshToken(uid: string) {
-    return await firebaseAdmin
+    return await this.admin
       .auth()
       .revokeRefreshTokens(uid)
       .catch(this.handleFirebaseAuthError);
@@ -124,14 +126,14 @@ export class FirebaseService {
     throw new Error(error.message);
   }
 
-    async saveUserToFirestore(userData: Record<string, any>) {
+  async saveUserToFirestore(userData: Record<string, any>) {
     const plainData = JSON.parse(JSON.stringify(userData)); // Remove métodos e protótipos
-    return await firebaseAdmin.firestore().collection('users').add(plainData);
+    return await this.firestore.collection('users').add(plainData);
   }
-async getProductById(productId: string): Promise<Product | null> {
-  const doc = await this.getFirestore().collection('products').doc(productId).get();
-  if (!doc.exists) return null;
-  return doc.data() as Product;
-}
 
+  async getProductById(productId: string): Promise<Product | null> {
+    const doc = await this.firestore.collection('products').doc(productId).get();
+    if (!doc.exists) return null;
+    return doc.data() as Product;
+  }
 }

@@ -13,6 +13,8 @@ import { OrderService } from './order/order.service';
 import { CartModule } from './cart/cart.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerService } from './scheduler/scheduler.service';
+import { RatingModule } from './Rating/rating.module';
+
 
 @Module({
   imports: [
@@ -24,6 +26,7 @@ import { SchedulerService } from './scheduler/scheduler.service';
     ProductModule,
     OrderModule,
     CartModule,
+    RatingModule,
   ],
   controllers: [AppController],
   providers: [
