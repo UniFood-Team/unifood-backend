@@ -6,7 +6,6 @@ import { CartItem, CartData } from './dtos/cart.dto';
 import { ProductService } from 'src/product/product.service';
 import { Product } from 'src/product/interface/product.interface';
 
-
 @Injectable()
 export class CartService {
   constructor(
@@ -55,6 +54,7 @@ async addToCart(userId: string, item: { productId: string; quantidade: number })
       items[existingIndex].quantidade = newQuantity;
     } else {
       if (quantidade > product.estoque) {
+
         throw new BadRequestException(`Quantidade solicitada ultrapassa o estoque disponível (${product.estoque}).`);
       }
       items.push({
@@ -83,7 +83,6 @@ async addToCart(userId: string, item: { productId: string; quantidade: number })
 
   return { message: 'Produto adicionado ao carrinho com sucesso.' };
 }
-
 
 
 async getCart(userId: string): Promise<CartData> {

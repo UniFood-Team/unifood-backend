@@ -15,6 +15,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerService } from './scheduler/scheduler.service';
 import { RatingModule } from './Rating/rating.module';
 
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),

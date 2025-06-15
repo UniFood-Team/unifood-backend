@@ -8,6 +8,7 @@ import { FirebaseConfigService } from './firebase-config.service';
 import { Product } from 'src/product/interface/product.interface';
 import * as serviceAccount from '../../serviceAccountKey.json';
 
+
 @Injectable()
 export class FirebaseService {
   private readonly apiKey: string;

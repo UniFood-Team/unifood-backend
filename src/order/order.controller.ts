@@ -35,7 +35,7 @@ export class OrderController {
   update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
     return this.orderService.update(id, updateOrderDto);
   }
-
+  
   @Get('history')
   @ApiOperation({ summary: 'Lista o histórico de pedidos do usuário autenticado' })
   getHistory(@Req() req: Request) {
