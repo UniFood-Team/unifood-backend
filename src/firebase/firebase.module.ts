@@ -1,9 +1,8 @@
 import * as firebaseAdmin from 'firebase-admin';
 import { DynamicModule, Global, Module } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { FirebaseConfigService } from './firebase-config.service';
 import { FirebaseService } from './firebase.service';
-import * as fs from 'fs';
+import * as functions from 'firebase-functions';
 
 @Global()
 @Module({})
@@ -11,10 +10,8 @@ export class FirebaseModule {
   static forRoot(): DynamicModule {
     const firebaseConfigProvider = {
       provide: FirebaseConfigService,
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const apiKey = configService.get<string>('APP_API_KEY');
-
+      useFactory: () => {
+        const apiKey = functions.config().app?.api_key;
         if (!apiKey) {
           throw new Error('APP_API_KEY environment variable is not set');
         }
@@ -24,21 +21,19 @@ export class FirebaseModule {
 
     const firebaseProvider = {
       provide: 'FIREBASE_ADMIN',
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => {
-        const credentials = configService.get<string>(
-          'SERVICE_ACCOUNT_CREDENTIALS',
-        );
-        if (!credentials) {
-          throw new Error(
-            'SERVICE_ACCOUNT_CREDENTIALS environment variable is not set',
-          );
+      useFactory: () => {
+        const credentialsStr = functions.config().app?.service_account;
+        if (!credentialsStr) {
+          throw new Error('SERVICE_ACCOUNT_CREDENTIALS environment variable is not set');
         }
 
-        const serviceAccount = JSON.parse(credentials);
-        firebaseAdmin.initializeApp({
-          credential: firebaseAdmin.credential.cert(serviceAccount),
-        });
+        const serviceAccount = JSON.parse(credentialsStr);
+
+        if (firebaseAdmin.apps.length === 0) {
+          firebaseAdmin.initializeApp({
+            credential: firebaseAdmin.credential.cert(serviceAccount),
+          });
+        }
 
         return firebaseAdmin;
       },
