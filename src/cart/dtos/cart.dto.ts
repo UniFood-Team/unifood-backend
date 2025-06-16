@@ -6,5 +6,5 @@ export interface CartItem {
 
 export interface CartData {
   items: CartItem[];
-  subtotal?:number;
+  subtotal?: number;
 }

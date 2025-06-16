@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "dist/src/main.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "dist/src/main.js"
+    }
+  ],
+  "env": {
+    "FIREBASE_API_KEY": "@FIREBASE_API_KEY",
+    "FIREBASE_ADMIN_CREDENTIALS": "@FIREBASE_ADMIN_CREDENTIALS"
+  }
+}
