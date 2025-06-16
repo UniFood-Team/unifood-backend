@@ -13,36 +13,41 @@ export class FirebaseModule {
       provide: FirebaseConfigService,
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const apiKey = configService.get<string>('FIREBASE_API_KEY');
+        const apiKey = configService.get<string>('APP_API_KEY');
+
         if (!apiKey) {
-          throw new Error('FIREBASE_API_KEY environment variable is not set');
+          throw new Error('APP_API_KEY environment variable is not set');
         }
         return new FirebaseConfigService(apiKey);
       },
     };
 
-    const firebaseAdminProvider = {
+    const firebaseProvider = {
       provide: 'FIREBASE_ADMIN',
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
-        const credentialsPath = configService.get<string>('FIREBASE_ADMIN_CREDENTIALS');
-        if (!credentialsPath) {
-          throw new Error('FIREBASE_ADMIN_CREDENTIALS environment variable is not set');
+        const credentials = configService.get<string>(
+          'SERVICE_ACCOUNT_CREDENTIALS',
+        );
+        if (!credentials) {
+          throw new Error(
+            'SERVICE_ACCOUNT_CREDENTIALS environment variable is not set',
+          );
         }
-        const serviceAccount = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
-        if (!firebaseAdmin.apps.length) {
-          firebaseAdmin.initializeApp({
-            credential: firebaseAdmin.credential.cert(serviceAccount),
-          });
-        }
+
+        const serviceAccount = JSON.parse(credentials);
+        firebaseAdmin.initializeApp({
+          credential: firebaseAdmin.credential.cert(serviceAccount),
+        });
+
         return firebaseAdmin;
       },
     };
 
     return {
       module: FirebaseModule,
-      providers: [firebaseConfigProvider, firebaseAdminProvider, FirebaseService],
-      exports: [firebaseConfigProvider, firebaseAdminProvider, FirebaseService],
+      providers: [firebaseConfigProvider, firebaseProvider, FirebaseService],
+      exports: [firebaseConfigProvider, firebaseProvider, FirebaseService],
     };
   }
 }
