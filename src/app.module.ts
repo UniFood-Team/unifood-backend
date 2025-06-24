@@ -12,6 +12,8 @@ import { OrderModule } from './order/order.module';
 import { OrderService } from './order/order.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerService } from './scheduler/scheduler.service';
+import { RatingModule } from './Rating/rating.module';
+
 
 @Module({
   imports: [

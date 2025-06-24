@@ -1,7 +1,7 @@
 import * as firebaseAdmin from 'firebase-admin';
 import { DynamicModule, Global, Module } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { FirebaseConfigService } from './firebase-config.service';
+import { ConfigService } from '@nestjs/config';
 import { FirebaseService } from './firebase.service';
 import * as fs from 'fs';
 
@@ -22,7 +22,7 @@ export class FirebaseModule {
       },
     };
 
-    const firebaseProvider = {
+    const firebaseAdminProvider = {
       provide: 'FIREBASE_ADMIN',
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
@@ -46,8 +46,8 @@ export class FirebaseModule {
 
     return {
       module: FirebaseModule,
-      providers: [firebaseConfigProvider, firebaseProvider, FirebaseService],
-      exports: [firebaseConfigProvider, firebaseProvider, FirebaseService],
+      providers: [firebaseConfigProvider, firebaseAdminProvider, FirebaseService],
+      exports: [firebaseConfigProvider, firebaseAdminProvider, FirebaseService],
     };
   }
 }

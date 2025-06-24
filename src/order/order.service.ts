@@ -1,9 +1,14 @@
+<<<<<<< HEAD
 import {
   Injectable,
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service'; // seu serviço Firebase
+=======
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { FirebaseService } from '../firebase/firebase.service'; 
+>>>>>>> 54504d2a0103fe3e3e7dd6b26eef70c76be243bb
 import { ProductService } from '../product/product.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
@@ -24,8 +29,14 @@ export class OrderService {
     private readonly productService: ProductService,
   ) {}
 
+<<<<<<< HEAD
   async create(createOrderDto: CreateOrderDto) {
     const { userId } = createOrderDto;
+=======
+  
+async create(createOrderDto: CreateOrderDto) {
+  const { userId } = createOrderDto;
+>>>>>>> 54504d2a0103fe3e3e7dd6b26eef70c76be243bb
 
     const db = this.firebaseService.getFirestore();
 
@@ -35,22 +46,177 @@ export class OrderService {
       const orderItems: OrderItem[] = []; // ✅ declare fora do loop apenas uma vez
       let total = 0;
 
+<<<<<<< HEAD
       transaction.set(orderRef, {
         userId,
         items: orderItems,
         total,
         status: 'pendente',
         createdAt: FieldValue.serverTimestamp(),
+=======
+  await db.runTransaction(async (transaction) => {
+    const orderItems: OrderItem[] = [];
+    let total = 0;
+
+    for (const cartItem of cart.items) {
+      const productRef = db.collection('products').doc(cartItem.productId);
+      const productSnap = await transaction.get(productRef);
+
+      if (!productSnap.exists) {
+        throw new NotFoundException(`Produto ${cartItem.productId} não encontrado.`);
+      }
+
+      const productData = productSnap.data();
+      if (!productData) {
+        throw new BadRequestException(`Dados do produto ${cartItem.productId} não encontrados.`);
+      }
+
+      const estoqueAtual = productData.estoque ?? 0;
+
+      if (estoqueAtual < cartItem.quantidade) {
+        throw new BadRequestException(
+          `Estoque insuficiente para o produto ${productData.nome}.`
+        );
+      }
+
+      const novoEstoque = estoqueAtual - cartItem.quantidade;
+
+      transaction.update(productRef, { estoque: novoEstoque });
+
+      const subtotal = productData.preco * cartItem.quantidade;
+      total += subtotal;
+
+      orderItems.push({
+        productId: cartItem.productId,
+        nome: productData.nome,
+        preco: productData.preco,
+        quantidade: cartItem.quantidade,
+        subtotal,
+>>>>>>> 54504d2a0103fe3e3e7dd6b26eef70c76be243bb
       });
     });
 
+<<<<<<< HEAD
     return {
       success: true,
       orderId: orderRef.id,
     };
   }
+=======
+  async getOrderHistory(userId: string) {
+  const db = this.firebaseService.getFirestore();
+  const ordersSnap = await db
+    .collection('orders')
+    .where('userId', '==', userId)
+    .orderBy('createdAt', 'desc')
+    .get();
 
-  // Outras funções (findAll, findOne, update, remove) podem continuar usando firebaseService direto
+  const orders = ordersSnap.docs.map((doc) => {
+    const data = doc.data();
+    if (!data) {
+      throw new NotFoundException(`Dados do pedido ${doc.id} não encontrados.`);
+    }
+
+    const produtosComAvaliacao = (data.items || []).map((produto: any) => ({
+      ...produto,
+      avaliado: false, // placeholder
+    }));
+
+    return {
+      id: doc.id,
+      data: data.createdAt?.toDate(),
+      status: data.status,
+      valorTotal: data.total,
+      produtos: produtosComAvaliacao,
+    };
+  });
+
+  return orders;
+}
+
+
+async getOrderDetails(orderId: string, userId: string) {
+  const db = this.firebaseService.getFirestore();
+
+  const docRef = db.collection('orders').doc(orderId);
+  const docSnap = await docRef.get();
+
+  if (!docSnap.exists) {
+    throw new NotFoundException('Pedido não encontrado');
+  }
+
+  const data = docSnap.data();
+  if (!data) {
+    throw new BadRequestException('Dados do pedido inválidos.');
+  }
+
+  if (data.userId !== userId) {
+    throw new ForbiddenException('Acesso negado a este pedido');
+  }
+
+  const produtosComAvaliacao = (data.items || []).map((produto: any) => ({
+    ...produto,
+    avaliado: false, // placeholder
+  }));
+
+  return {
+    id: docSnap.id,
+    data: data.createdAt?.toDate(),
+    status: data.status,
+    total: data.total,
+    formaPagamento: data.formaPagamento,
+    produtos: produtosComAvaliacao,
+  };
+}
+
+async addOrderToCart(orderId: string, userId: string) {
+  const db = this.firebaseService.getFirestore();
+
+  const orderRef = db.collection('orders').doc(orderId);
+  const orderSnap = await orderRef.get();
+
+  if (!orderSnap.exists) {
+    throw new NotFoundException('Pedido não encontrado.');
+  }
+
+  const orderData = orderSnap.data();
+  if (!orderData) {
+    throw new BadRequestException('Dados do pedido inválidos.');
+  }
+
+  if (orderData.userId !== userId) {
+    throw new ForbiddenException('Acesso negado a este pedido.');
+  }
+
+  const cartRef = db.collection('carts').doc(userId);
+  const cartSnap = await cartRef.get();
+
+  const currentCart = cartSnap.exists ? cartSnap.data() ?? {} : { items: [] };
+
+  const currentItems = Array.isArray(currentCart.items) ? currentCart.items : [];
+
+
+  const itemsToAdd = (orderData.items || []).map((item: any) => ({
+    productId: item.productId,
+    quantidade: item.quantidade,
+  }));
+
+  for (const item of itemsToAdd) {
+    const existingItem = currentItems.find((i: any) => i.productId === item.productId);
+    if (existingItem) {
+      existingItem.quantidade += item.quantidade;
+    } else {
+      currentItems.push(item);
+    }
+  }
+
+  await cartRef.set({ items: currentItems });
+
+  return { success: true, message: 'Itens adicionados ao carrinho com sucesso.' };
+}
+
+>>>>>>> 54504d2a0103fe3e3e7dd6b26eef70c76be243bb
+
   async findAll() {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection('orders').get();
@@ -177,8 +343,40 @@ export class OrderService {
       // Atualiza o status para cancelado
       await orderRef.update({ status: newStatus });
 
+<<<<<<< HEAD
       const updatedOrderSnap = await orderRef.get();
       return { id: updatedOrderSnap.id, ...updatedOrderSnap.data() };
+=======
+    // Retorna o pedido atualizado
+    const updatedOrderSnap = await orderRef.get();
+    return { id: updatedOrderSnap.id, ...updatedOrderSnap.data() };
+  }
+
+  // Quando o novo status é "cancelado" e o anterior era "pago", reabastece o estoque
+  if (newStatus === 'cancelado' && currentStatus === 'pago') {
+    for (const item of orderData.items) {
+      const productRef = db.collection('products').doc(item.productId);
+      const productSnap = await productRef.get();
+
+      if (!productSnap.exists) {
+        throw new NotFoundException(`Produto ${item.productId} não encontrado.`);
+      }
+
+      const productData = productSnap.data();
+      if (!productData) {
+        throw new BadRequestException(`Dados do produto ${item.productId} não encontrados.`);
+      }
+      const currentStock = Number(productData.estoque);
+      const quantityToAdd = Number(item.quantidade);
+
+      if (isNaN(currentStock) || isNaN(quantityToAdd)) {
+        throw new BadRequestException(`Quantidade ou estoque inválidos para o produto ${productData.nome}.`);
+      }
+
+      await productRef.update({
+        estoque: currentStock + quantityToAdd,
+      });
+>>>>>>> 54504d2a0103fe3e3e7dd6b26eef70c76be243bb
     }
 
     // Caso contrário, apenas atualiza o status normalmente
