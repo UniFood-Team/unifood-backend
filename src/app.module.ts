@@ -10,7 +10,6 @@ import { APP_GUARD } from '@nestjs/core';
 import { ProductModule } from './product/product.module';
 import { OrderModule } from './order/order.module';
 import { OrderService } from './order/order.service';
-import { CartModule } from './cart/cart.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerService } from './scheduler/scheduler.service';
 
@@ -23,7 +22,6 @@ import { SchedulerService } from './scheduler/scheduler.service';
     UsersModule,
     ProductModule,
     OrderModule,
-    CartModule,
   ],
   controllers: [AppController],
   providers: [

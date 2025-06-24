@@ -3,7 +3,7 @@ import { DynamicModule, Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FirebaseConfigService } from './firebase-config.service';
 import { FirebaseService } from './firebase.service';
-import * as fs from 'fs'
+import * as fs from 'fs';
 
 @Global()
 @Module({})
@@ -14,7 +14,7 @@ export class FirebaseModule {
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         const apiKey = configService.get<string>('FIREBASE_API_KEY');
-        
+
         if (!apiKey) {
           throw new Error('FIREBASE_API_KEY environment variable is not set');
         }
@@ -35,7 +35,7 @@ export class FirebaseModule {
           );
         }
 
-        const serviceAccount = JSON.parse(fs.readFileSync(credentials, 'utf8'));
+        const serviceAccount = JSON.parse(credentials);
         firebaseAdmin.initializeApp({
           credential: firebaseAdmin.credential.cert(serviceAccount),
         });

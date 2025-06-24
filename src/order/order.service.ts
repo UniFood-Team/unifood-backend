@@ -1,11 +1,13 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service'; // seu serviço Firebase
 import { ProductService } from '../product/product.service';
-import { CartService } from '../cart/cart.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { FieldValue } from 'firebase-admin/firestore';
-
 
 type OrderItem = {
   productId: string;
@@ -20,85 +22,39 @@ export class OrderService {
   constructor(
     private readonly firebaseService: FirebaseService,
     private readonly productService: ProductService,
-    private readonly cartService: CartService,
   ) {}
 
-async create(createOrderDto: CreateOrderDto) {
-  const { userId } = createOrderDto;
+  async create(createOrderDto: CreateOrderDto) {
+    const { userId } = createOrderDto;
 
-  const db = this.firebaseService.getFirestore();
-  const cart = await this.cartService.getCart(userId);
+    const db = this.firebaseService.getFirestore();
 
-  if (!cart || !cart.items?.length) {
-    throw new BadRequestException('Carrinho está vazio.');
-  }
+    const orderRef = db.collection('orders').doc();
 
-  const orderRef = db.collection('orders').doc();
+    await db.runTransaction(async (transaction) => {
+      const orderItems: OrderItem[] = []; // ✅ declare fora do loop apenas uma vez
+      let total = 0;
 
-  await db.runTransaction(async (transaction) => {
-    const orderItems: OrderItem[] = []; // ✅ declare fora do loop apenas uma vez
-    let total = 0;
-
-    for (const cartItem of cart.items) {
-      const productRef = db.collection('products').doc(cartItem.productId);
-      const productSnap = await transaction.get(productRef);
-
-      if (!productSnap.exists) {
-        throw new NotFoundException(`Produto ${cartItem.productId} não encontrado.`);
-      }
-
-      const productData = productSnap.data();
-      if (!productData) {
-        throw new BadRequestException(`Dados do produto ${cartItem.productId} não encontrados.`);
-      }
-
-      const estoqueAtual = productData.estoque ?? 0;
-
-      if (estoqueAtual < cartItem.quantidade) {
-        throw new BadRequestException(
-          `Estoque insuficiente para o produto ${productData.nome}.`
-        );
-      }
-
-      const novoEstoque = estoqueAtual - cartItem.quantidade;
-
-      transaction.update(productRef, { estoque: novoEstoque });
-
-      const subtotal = productData.preco * cartItem.quantidade;
-      total += subtotal;
-
-      orderItems.push({
-        productId: cartItem.productId,
-        nome: productData.nome,
-        preco: productData.preco,
-        quantidade: cartItem.quantidade,
-        subtotal,
+      transaction.set(orderRef, {
+        userId,
+        items: orderItems,
+        total,
+        status: 'pendente',
+        createdAt: FieldValue.serverTimestamp(),
       });
-    }
-
-    transaction.set(orderRef, {
-      userId,
-      items: orderItems,
-      total,
-      status: 'pendente',
-      createdAt: FieldValue.serverTimestamp(),
     });
-  });
 
-  await this.cartService.clearCart(userId);
-
-  return {
-    success: true,
-    orderId: orderRef.id,
-  };
-}
-
+    return {
+      success: true,
+      orderId: orderRef.id,
+    };
+  }
 
   // Outras funções (findAll, findOne, update, remove) podem continuar usando firebaseService direto
   async findAll() {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection('orders').get();
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   }
 
   async findOne(id: string) {
@@ -112,206 +68,234 @@ async create(createOrderDto: CreateOrderDto) {
     return { id: orderSnap.id, ...orderSnap.data() };
   }
 
-async update(id: string, updateOrderDto: UpdateOrderDto) {
-  const db = this.firebaseService.getFirestore();
-  const orderRef = db.collection('orders').doc(id);
-  const orderSnap = await orderRef.get();
+  async update(id: string, updateOrderDto: UpdateOrderDto) {
+    const db = this.firebaseService.getFirestore();
+    const orderRef = db.collection('orders').doc(id);
+    const orderSnap = await orderRef.get();
 
-  if (!orderSnap.exists) {
-    throw new NotFoundException(`Pedido ${id} não encontrado.`);
-  }
+    if (!orderSnap.exists) {
+      throw new NotFoundException(`Pedido ${id} não encontrado.`);
+    }
 
-  const orderData = orderSnap.data();
-  if (!orderData) {
-    throw new BadRequestException('Dados do pedido inválidos.');
-  }
+    const orderData = orderSnap.data();
+    if (!orderData) {
+      throw new BadRequestException('Dados do pedido inválidos.');
+    }
 
-  const currentStatus = orderData.status;
-  const newStatus = updateOrderDto.status;
+    const currentStatus = orderData.status;
+    const newStatus = updateOrderDto.status;
 
-  if (!newStatus) {
-    throw new BadRequestException('Nenhum campo válido para atualizar.');
-  }
+    if (!newStatus) {
+      throw new BadRequestException('Nenhum campo válido para atualizar.');
+    }
 
-  // Se status for igual, nada a fazer
-  if (newStatus === currentStatus) {
-    return { id: orderSnap.id, ...orderData };
-  }
+    // Se status for igual, nada a fazer
+    if (newStatus === currentStatus) {
+      return { id: orderSnap.id, ...orderData };
+    }
 
-  // ✅ Quando o novo status é "pago", usamos uma transação para reduzir o estoque com segurança
-  if (newStatus === 'pago' && currentStatus !== 'pago') {
-    await db.runTransaction(async (transaction) => {
+    // ✅ Quando o novo status é "pago", usamos uma transação para reduzir o estoque com segurança
+    if (newStatus === 'pago' && currentStatus !== 'pago') {
+      await db.runTransaction(async (transaction) => {
+        for (const item of orderData.items) {
+          const productRef = db.collection('products').doc(item.productId);
+          const productSnap = await transaction.get(productRef);
+
+          if (!productSnap.exists) {
+            throw new NotFoundException(
+              `Produto ${item.productId} não encontrado.`,
+            );
+          }
+
+          const productData = productSnap.data();
+          if (!productData) {
+            throw new BadRequestException(
+              `Dados do produto ${item.productId} não encontrados.`,
+            );
+          }
+          const currentStock = Number(productData.estoque);
+          const quantityToReduce = Number(item.quantidade);
+
+          if (isNaN(currentStock) || isNaN(quantityToReduce)) {
+            throw new BadRequestException(
+              `Quantidade ou estoque inválidos para o produto ${productData.nome}.`,
+            );
+          }
+
+          if (currentStock < quantityToReduce) {
+            throw new BadRequestException(
+              `Estoque insuficiente para o produto ${productData.nome}.`,
+            );
+          }
+
+          transaction.update(productRef, {
+            estoque: currentStock - quantityToReduce,
+          });
+        }
+
+        // Atualiza o status do pedido dentro da mesma transação
+        transaction.update(orderRef, { status: newStatus });
+      });
+
+      // Retorna o pedido atualizado
+      const updatedOrderSnap = await orderRef.get();
+      return { id: updatedOrderSnap.id, ...updatedOrderSnap.data() };
+    }
+
+    // ✅ Quando o novo status é "cancelado" e o anterior era "pago", reabastece o estoque
+    if (newStatus === 'cancelado' && currentStatus === 'pago') {
       for (const item of orderData.items) {
         const productRef = db.collection('products').doc(item.productId);
-        const productSnap = await transaction.get(productRef);
+        const productSnap = await productRef.get();
 
         if (!productSnap.exists) {
-          throw new NotFoundException(`Produto ${item.productId} não encontrado.`);
+          throw new NotFoundException(
+            `Produto ${item.productId} não encontrado.`,
+          );
         }
 
         const productData = productSnap.data();
         if (!productData) {
-          throw new BadRequestException(`Dados do produto ${item.productId} não encontrados.`);
+          throw new BadRequestException(
+            `Dados do produto ${item.productId} não encontrados.`,
+          );
         }
         const currentStock = Number(productData.estoque);
-        const quantityToReduce = Number(item.quantidade);
+        const quantityToAdd = Number(item.quantidade);
 
-        if (isNaN(currentStock) || isNaN(quantityToReduce)) {
-          throw new BadRequestException(`Quantidade ou estoque inválidos para o produto ${productData.nome}.`);
+        if (isNaN(currentStock) || isNaN(quantityToAdd)) {
+          throw new BadRequestException(
+            `Quantidade ou estoque inválidos para o produto ${productData.nome}.`,
+          );
         }
 
-        if (currentStock < quantityToReduce) {
-          throw new BadRequestException(`Estoque insuficiente para o produto ${productData.nome}.`);
-        }
-
-        transaction.update(productRef, {
-          estoque: currentStock - quantityToReduce,
+        await productRef.update({
+          estoque: currentStock + quantityToAdd,
         });
       }
 
-      // Atualiza o status do pedido dentro da mesma transação
-      transaction.update(orderRef, { status: newStatus });
-    });
+      // Atualiza o status para cancelado
+      await orderRef.update({ status: newStatus });
 
-    // Retorna o pedido atualizado
-    const updatedOrderSnap = await orderRef.get();
-    return { id: updatedOrderSnap.id, ...updatedOrderSnap.data() };
-  }
-
-  // ✅ Quando o novo status é "cancelado" e o anterior era "pago", reabastece o estoque
-  if (newStatus === 'cancelado' && currentStatus === 'pago') {
-    for (const item of orderData.items) {
-      const productRef = db.collection('products').doc(item.productId);
-      const productSnap = await productRef.get();
-
-      if (!productSnap.exists) {
-        throw new NotFoundException(`Produto ${item.productId} não encontrado.`);
-      }
-
-      const productData = productSnap.data();
-      if (!productData) {
-        throw new BadRequestException(`Dados do produto ${item.productId} não encontrados.`);
-      }
-      const currentStock = Number(productData.estoque);
-      const quantityToAdd = Number(item.quantidade);
-
-      if (isNaN(currentStock) || isNaN(quantityToAdd)) {
-        throw new BadRequestException(`Quantidade ou estoque inválidos para o produto ${productData.nome}.`);
-      }
-
-      await productRef.update({
-        estoque: currentStock + quantityToAdd,
-      });
+      const updatedOrderSnap = await orderRef.get();
+      return { id: updatedOrderSnap.id, ...updatedOrderSnap.data() };
     }
 
-    // Atualiza o status para cancelado
+    // Caso contrário, apenas atualiza o status normalmente
     await orderRef.update({ status: newStatus });
 
     const updatedOrderSnap = await orderRef.get();
     return { id: updatedOrderSnap.id, ...updatedOrderSnap.data() };
   }
 
-  // Caso contrário, apenas atualiza o status normalmente
-  await orderRef.update({ status: newStatus });
+  async cancelExpiredPendingOrders() {
+    const db = this.firebaseService.getFirestore();
+    const now = new Date();
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
 
-  const updatedOrderSnap = await orderRef.get();
-  return { id: updatedOrderSnap.id, ...updatedOrderSnap.data() };
-}
+    const pendingOrdersSnap = await db
+      .collection('orders')
+      .where('status', '==', 'pendente')
+      .where('createdAt', '<=', fiveMinutesAgo)
+      .get();
 
-async cancelExpiredPendingOrders() {
-  const db = this.firebaseService.getFirestore();
-  const now = new Date();
-  const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    const batch = db.batch();
 
-  const pendingOrdersSnap = await db.collection('orders')
-    .where('status', '==', 'pendente')
-    .where('createdAt', '<=', fiveMinutesAgo)
-    .get();
+    pendingOrdersSnap.forEach((doc) => {
+      const orderData = doc.data();
+      const orderRef = db.collection('orders').doc(doc.id);
 
-  const batch = db.batch();
-
-  pendingOrdersSnap.forEach((doc) => {
-    const orderData = doc.data();
-    const orderRef = db.collection('orders').doc(doc.id);
-
-    orderData.items.forEach((item) => {
-      const productRef = db.collection('products').doc(item.productId);
-      batch.update(productRef, {
-        estoque: FieldValue.increment(item.quantidade)
+      orderData.items.forEach((item) => {
+        const productRef = db.collection('products').doc(item.productId);
+        batch.update(productRef, {
+          estoque: FieldValue.increment(item.quantidade),
+        });
       });
+
+      batch.update(orderRef, { status: 'cancelado' });
     });
 
-    batch.update(orderRef, { status: 'cancelado' });
-  });
-
-  await batch.commit();
-}
-
-// Função para reduzir estoque dos produtos no pedido
-private async reduceStock(items: OrderItem[]) {
-  if (items.length > 0) {
-    console.log('Chamando updateQuantity com productId:', items[0].productId);
+    await batch.commit();
   }
-  for (const item of items) {
-    const product = await this.productService.findById(item.productId);
-    if (!product) {
-      throw new NotFoundException(`Produto ${item.productId} não encontrado.`);
+
+  // Função para reduzir estoque dos produtos no pedido
+  private async reduceStock(items: OrderItem[]) {
+    if (items.length > 0) {
+      console.log('Chamando updateQuantity com productId:', items[0].productId);
     }
+    for (const item of items) {
+      const product = await this.productService.findById(item.productId);
+      if (!product) {
+        throw new NotFoundException(
+          `Produto ${item.productId} não encontrado.`,
+        );
+      }
 
-    const currentStock = Number(product.estoque);
-    const quantityToReduce = Number(item.quantidade);
+      const currentStock = Number(product.estoque);
+      const quantityToReduce = Number(item.quantidade);
 
-    console.log(`Produto: ${product.nome}, Estoque atual: ${currentStock}, Quantidade a reduzir: ${quantityToReduce}`);
+      console.log(
+        `Produto: ${product.nome}, Estoque atual: ${currentStock}, Quantidade a reduzir: ${quantityToReduce}`,
+      );
 
-    if (isNaN(currentStock) || isNaN(quantityToReduce)) {
-      throw new BadRequestException(`Quantidade ou estoque inválidos para o produto ${product.nome}.`);
+      if (isNaN(currentStock) || isNaN(quantityToReduce)) {
+        throw new BadRequestException(
+          `Quantidade ou estoque inválidos para o produto ${product.nome}.`,
+        );
+      }
+
+      if (currentStock < quantityToReduce) {
+        throw new BadRequestException(
+          `Estoque insuficiente para o produto ${product.nome}.`,
+        );
+      }
+
+      const newStock = currentStock - quantityToReduce;
+
+      await this.productService.updateQuantity(item.productId, newStock);
     }
-
-    if (currentStock < quantityToReduce) {
-      throw new BadRequestException(`Estoque insuficiente para o produto ${product.nome}.`);
-    }
-
-    const newStock = currentStock - quantityToReduce;
-
-    await this.productService.updateQuantity(item.productId, newStock);
   }
-}
 
-// Função para re-adicionar estoque dos produtos no pedido (cancelamento)
-private async restock(items: OrderItem[]) {
-  for (const item of items) {
-    const product = await this.productService.findById(item.productId);
-    if (!product) {
-      throw new NotFoundException(`Produto ${item.productId} não encontrado.`);
+  // Função para re-adicionar estoque dos produtos no pedido (cancelamento)
+  private async restock(items: OrderItem[]) {
+    for (const item of items) {
+      const product = await this.productService.findById(item.productId);
+      if (!product) {
+        throw new NotFoundException(
+          `Produto ${item.productId} não encontrado.`,
+        );
+      }
+
+      const currentStock = Number(product.estoque);
+      const quantityToAdd = Number(item.quantidade);
+
+      console.log(
+        `Produto: ${product.nome}, Estoque atual: ${currentStock}, Quantidade a adicionar: ${quantityToAdd}`,
+      );
+
+      if (isNaN(currentStock) || isNaN(quantityToAdd)) {
+        throw new BadRequestException(
+          `Quantidade ou estoque inválidos para o produto ${product.nome}.`,
+        );
+      }
+
+      const newStock = currentStock + quantityToAdd;
+
+      await this.productService.updateQuantity(item.productId, newStock);
     }
-
-    const currentStock = Number(product.estoque);
-    const quantityToAdd = Number(item.quantidade);
-
-    console.log(`Produto: ${product.nome}, Estoque atual: ${currentStock}, Quantidade a adicionar: ${quantityToAdd}`);
-
-    if (isNaN(currentStock) || isNaN(quantityToAdd)) {
-      throw new BadRequestException(`Quantidade ou estoque inválidos para o produto ${product.nome}.`);
-    }
-
-    const newStock = currentStock + quantityToAdd;
-
-    await this.productService.updateQuantity(item.productId, newStock);
   }
-}
 
   async cancel(id: string) {
-  const db = this.firebaseService.getFirestore();
-  const orderRef = db.collection('orders').doc(id);
-  const orderSnap = await orderRef.get();
+    const db = this.firebaseService.getFirestore();
+    const orderRef = db.collection('orders').doc(id);
+    const orderSnap = await orderRef.get();
 
-  if (!orderSnap.exists) {
-    throw new NotFoundException(`Pedido ${id} não encontrado.`);
+    if (!orderSnap.exists) {
+      throw new NotFoundException(`Pedido ${id} não encontrado.`);
+    }
+
+    await orderRef.update({ status: 'cancelado' });
+
+    return { success: true, message: `Pedido ${id} cancelado.` };
   }
-
-  await orderRef.update({ status: 'cancelado' });
-
-  return { success: true, message: `Pedido ${id} cancelado.` };
-}
-
 }
