@@ -20,11 +20,6 @@ export class UsersController {
     return await this.usersService.registerUser(dto);
   }
 
-  @Post('sync-auth-users')
-async syncAuth() {
-  return this.usersService.syncAuthUsersToFirestore();
-}
-
   @Get('profile')
   async profile(@IdToken() token: string) {
     return await this.firebaseService.verifyIdToken(token);

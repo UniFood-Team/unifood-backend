@@ -1,5 +1,11 @@
 import { Controller, Post, Body, Get, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiParam,
+} from '@nestjs/swagger';
 import { RatingService } from './rating.service';
 import { CreateRatingDto } from './dto/create-rating.dto';
 
@@ -31,5 +37,4 @@ export class RatingController {
   listSellerRatings(@Param('sellerId') sellerId: string) {
     return this.ratingService.listRatings('vendedor', sellerId);
   }
-
 }

@@ -14,7 +14,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerService } from './scheduler/scheduler.service';
 import { RatingModule } from './Rating/rating.module';
 
-
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -24,6 +23,7 @@ import { RatingModule } from './Rating/rating.module';
     UsersModule,
     ProductModule,
     OrderModule,
+    RatingModule,
   ],
   controllers: [AppController],
   providers: [
