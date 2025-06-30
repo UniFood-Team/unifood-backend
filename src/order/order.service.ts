@@ -6,17 +6,9 @@ import {
 } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
 import { ProductService } from '../product/product.service';
-import { CreateOrderDto } from './dto/create-order.dto';
+import { CreateOrderDto, OrderItem } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { FieldValue } from 'firebase-admin/firestore';
-
-type OrderItem = {
-  productId: string;
-  nome: string;
-  preco: number;
-  quantidade: number;
-  subtotal: number;
-};
 
 @Injectable()
 export class OrderService {
@@ -26,21 +18,92 @@ export class OrderService {
   ) {}
 
   async create(createOrderDto: CreateOrderDto) {
-    const { userId } = createOrderDto;
-
+    const { userId, items } = createOrderDto;
     const db = this.firebaseService.getFirestore();
-
     const orderRef = db.collection('orders').doc();
 
     await db.runTransaction(async (transaction) => {
-      const orderItems: OrderItem[] = [];
       let total = 0;
+      const orderItems: OrderItem[] = [];
+      const productsData: any[] = [];
+
+      // 1. Faça todas as leituras primeiro
+      for (const cartItem of items) {
+        const productRef = db.collection('products').doc(cartItem.productId);
+        const productSnap = await transaction.get(productRef);
+
+        if (!productSnap.exists) {
+          throw new NotFoundException(
+            `Produto ${cartItem.productId} não encontrado.`,
+          );
+        }
+
+        const productData = productSnap.data();
+        if (!productData) {
+          throw new BadRequestException(
+            `Dados do produto ${cartItem.productId} não encontrados.`,
+          );
+        }
+
+        productsData.push({
+          productRef,
+          productData,
+          cartItem,
+        });
+      }
+      if (createOrderDto.couponId) {
+        const couponRef = db.collection('coupons').doc(createOrderDto.couponId);
+        const couponSnap = await transaction.get(couponRef);
+
+        if (!couponSnap.exists) {
+          throw new NotFoundException(
+            `Cupom ${createOrderDto.couponId} não encontrado.`,
+          );
+        }
+
+        const couponData = couponSnap.data();
+        if (!couponData) {
+          throw new BadRequestException(
+            `Dados do cupom ${createOrderDto.couponId} não encontrados.`,
+          );
+        }
+
+        // Aplicar desconto
+        const discount = couponData.discount || 0;
+        total -= discount;
+      }
+
+      // 2. Agora faça as escritas (updates e set)
+      for (const { productRef, productData, cartItem } of productsData) {
+        const estoqueAtual = productData.estoque ?? 0;
+
+        if (estoqueAtual < cartItem.quantidade) {
+          throw new BadRequestException(
+            `Estoque insuficiente para o produto ${productData.nome}.`,
+          );
+        }
+        const novoEstoque = estoqueAtual - cartItem.quantidade;
+
+        transaction.update(productRef, { estoque: novoEstoque });
+
+        const subtotal = productData.preco * cartItem.quantidade;
+        total += subtotal;
+
+        orderItems.push({
+          productId: cartItem.productId,
+          nome: productData.nome,
+          preco: productData.preco,
+          quantidade: cartItem.quantidade,
+          subtotal,
+        });
+      }
 
       transaction.set(orderRef, {
         userId,
         items: orderItems,
         total,
         status: 'pendente',
+        couponId: createOrderDto.couponId || null,
         createdAt: FieldValue.serverTimestamp(),
       });
     });
