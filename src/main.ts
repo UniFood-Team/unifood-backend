@@ -40,7 +40,11 @@ const createNestServer = async (expressInstance) => {
     new ExpressAdapter(expressInstance),
   );
 
-  // A ordem aqui é importante
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
+
   app.setGlobalPrefix('api');
   configureSwagger(app);
   configureValidationPipe(app);
