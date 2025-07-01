@@ -37,4 +37,19 @@ export class RatingController {
   listSellerRatings(@Param('sellerId') sellerId: string) {
     return this.ratingService.listRatings('vendedor', sellerId);
   }
+
+  @Get('user/:userId')
+  @ApiOperation({ summary: 'Listar todas as avaliações que um usuario fez' })
+  @ApiParam({ name: 'userId', description: 'ID do usuario' })
+  @ApiResponse({ status: 200, description: 'Lista de avaliações do usuario.' })
+  listUserRatings(@Param('userId') userId: string) {
+    return this.ratingService.listUserRatings(userId);
+  }
+
+  @Get('all')
+  @ApiOperation({ summary: 'Listar avaliações de um vendedor' })
+  @ApiResponse({ status: 200, description: 'Lista de avaliações do vendedor.' })
+  listAllSellersRatings() {
+    return this.ratingService.listAllSellerRatings();
+  }
 }
